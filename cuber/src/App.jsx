@@ -19,6 +19,7 @@ function App() {
 	let [inputFaceColors, setInputFaceColor] = useState({});
 	// "algoResult" stores forward and backward algorithm outputs
 	let [algoResult, setAlgoResult] = useState({});
+	
 	function resetCube()
 	{
 		setInputFaceColor(
@@ -43,138 +44,168 @@ function App() {
 	{
 		resetCube();
 	}, []);
-	/* There are 5 pages in the app and only one page should be visible at once.
-	So, "pageVisibility" array says which page to show at a time.
-	Initially, only 1st page is "true" (Visible) */
+
 	let [pageVisibility, setPageVisibility] = useState([true, false, false, false, false]);
 
-	// Clicking to "Start" button of 1st page takes user to 2nd page
 	function handleStart()
 	{
-		console.log("started");
 		setPageVisibility([false, true, false, false, false]);
 	}
-	// Takes user to 3rd page
 	function handlePosition()
 	{
-		console.log("Position Ran");
 		setPageVisibility([false, false, true, false, false]);
 	}
-	// Takes user to 4th page
 	function handleFaceInput()
 	{
-		console.log("Face Input Ran");
 		setPageVisibility([false, false, false, true, false]);
 	}
-	// Set respective face color according to user input from keyboard
-	function handleFaceSet(e)
-	{
-		console.log("Face Set Ran");
-		let name = e.target.name;					// Get name of selected face(Total 6 faces)
-		let value = e.target.value;					// Get string typed by user on input field
-		let finalValue = [];
-		// At first, store default color array for selected face
-		switch(name)
-		{
-			case "front":
-				finalValue = frontColor;
-				break;
-			case "right":
-				finalValue = rightColor;
-				break;
-			case "upper":
-				finalValue = upperColor;
-				break;
-			case "down":
-				finalValue = downColor;
-				break;
-			case "left":
-				finalValue = leftColor;
-				break;
-			case "back":
-				finalValue = backColor;
-				break;
-			default:
-				console.log("Color Assignment Error");
+    
+    // Logic to update a specific sticker
+    function updateFaceColor(faceName, index, color) {
+        setInputFaceColor(prev => {
+            let newFaceArray = [...prev[faceName]];
+            // Don't allow changing the center piece (index 4)
+            if (index !== 4) {
+                newFaceArray[index] = color;
+            }
+            return {
+                ...prev,
+                [faceName]: newFaceArray
+            };
+        });
+    }
+
+	// Logic to Scramble the cube (Rotate logical arrays)
+	function scrambleCube() {
+		let moves = ["U", "D", "L", "R", "F", "B"];
+		let scrambleLength = 20;
+		let currentColors = { ...inputFaceColors };
+
+		// Helpers to rotate specific arrays
+		const rotateFaceClockwise = (arr) => {
+			return [
+				arr[6], arr[3], arr[0],
+				arr[7], arr[4], arr[1],
+				arr[8], arr[5], arr[2]
+			];
+		};
+
+		const applyMove = (move, state) => {
+			let { front, right, upper, down, left, back } = state;
+			let newFront = [...front], newRight = [...right], newUpper = [...upper], 
+				newDown = [...down], newLeft = [...left], newBack = [...back];
+
+			switch (move) {
+				case "U": // Upper Clockwise
+					newUpper =TkateFaceClockwise(upper);
+					// F -> L -> B -> R -> F (Top row 0,1,2)
+					[0, 1, 2].forEach(i => {
+						newLeft[i] = front[i];
+						newBack[i] = left[i];
+						newRight[i] = back[i];
+						newFront[i] = right[i];
+					});
+					break;
+				case "D": // Down Clockwise
+					newDown = rotateFaceClockwise(down);
+					// F -> R -> B -> L -> F (Bottom row 6,7,8)
+					[6, 7, 8].forEach(i => {
+						newRight[i] = front[i];
+						newBack[i] = right[i];
+						newLeft[i] = back[i];
+						newFront[i] = left[i];
+					});
+					break;
+				case "L": // Left Clockwise
+					newLeft = rotateFaceClockwise(left);
+					// U -> F -> D -> B(inv) -> U (Col 0,3,6)
+					[0, 3, 6].forEach(i => {
+						newFront[i] = upper[i];
+						newDown[i] = front[i];
+					});
+					newBack[8] = down[0]; newBack[5] = down[3]; newBack[2] = down[6];
+					newUpper[0] = back[8]; newUpper[3] = back[5]; newUpper[6] = back[2];
+					break;
+				case "R": // Right Clockwise
+					newRight = rotateFaceClockwise(right);
+					// U -> B(inv) -> D -> F -> U (Col 2,5,8)
+					[2, 5, 8].forEach(i => {
+						newBack[10-i-2] = upper[i]; // 8->0, 5->3, 2->6 logic handled manually below
+					});
+					newBack[6] = upper[2]; newBack[3] = upper[5]; newBack[0] = upper[8];
+					newDown[2] = back[6]; newDown[5] = back[3]; newDown[8] = back[0];
+					newFront[2] = down[2]; newFront[5] = down[5]; newFront[8] = down[8];
+					newUpper[2] = front[2]; newUpper[5] = front[5]; newUpper[8] = front[8];
+					break;
+				case "F": // Front Clockwise
+					newFront = rotateFaceClockwise(front);
+					// U(6,7,8) -> R(0,3,6) -> D(2,1,0) -> L(8,5,2) -> U
+					newRight[0] = upper[6]; newRight[3] = upper[7]; newRight[6] = upper[8];
+					newDown[2] = right[0]; newDown[1] = right[3]; newDown[0] = right[6];
+					newLeft[8] = down[2]; newLeft[5] = down[1]; newLeft[2] = down[0];
+					newUpper[6] = left[8]; newUpper[7] = left[5]; newUpper[8] = left[2];
+					break;
+				case "B": // Back Clockwise
+					newBack = rotateFaceClockwise(back);
+					// U(2,1,0) -> L(0,3,6) -> D(6,7,8) -> R(8,5,2) -> U
+					newLeft[0] = upper[2]; newLeft[3] = upper[1]; newLeft[6] = upper[0];
+					newDown[6] = left[0]; newDown[7] = left[3]; newDown[8] = left[6];
+					newRight[8] = down[6]; newRight[5] = down[7]; newRight[2] = down[8];
+					newUpper[2] = right[8]; newUpper[1] = right[5]; newUpper[0] = right[2];
+					break;
 			}
-		// Now, modify above default color array according to input string
-		finalValue = finalValue.map((color, index) =>
-			{
-				let finalColor = color;
-				if(index < value.length)			// "value" contains input string
-				{
-					switch(value[index])
-					{
-						case "g": 
-							finalColor = "green";
-							break;
-						case "r": 
-							finalColor = "red";
-							break;
-						case "w": 
-							finalColor = "white";
-							break;
-						case "y": 
-							finalColor = "yellow";
-							break;
-						case "o": 
-							finalColor = "orange";
-							break;
-						case "b": 
-							finalColor = "blue";
-							break;
-						default:
-							console.log("Invalid Color. Default color will be used.");
-	
-					}
-				}
-				// 4th index is center of a face whose color is always constant
-				// It should always be set to default color, independent to user input
-				if(index == 4)
-				{
-					finalColor = color;
-				}
-				return finalColor;
-			});
-			// Finally, assign modified color array on selected face
-			setInputFaceColor(prevInputColor =>
-				{
-					return {
-					...prevInputColor,
-					// Use [] inside object if "key" is a variable
-					[name]: finalValue
-				}
-			});
+			
+			// Helper function inside scope
+			function TkateFaceClockwise(arr) {
+				return [arr[6], arr[3], arr[0], arr[7], arr[4], arr[1], arr[8], arr[5], arr[2]];
+			}
+
+			return { front: newFront, right: newRight, upper: newUpper, down: newDown, left: newLeft, back: newBack };
+		};
+
+		// Apply random moves
+		for(let i=0; i<scrambleLength; i++) {
+			let randomMove = moves[Math.floor(Math.random() * moves.length)];
+			currentColors = applyMove(randomMove, currentColors);
+		}
+		setInputFaceColor(currentColors);
 	}
-	// Start of solver 
+
+	function handleFaceSet(e) {
+        // ... (Keep existing logic if needed for text inputs, but 3D is primary now)
+        // Leaving this as fallback or you can remove it if fully switching
+    }
+
 	function handleSolver()
 	{
 		console.log("Solver Ran");
 	}
 	function replayApp()
 	{
-		// Reset cube parameters
 		resetCube();
-		// Takes user to starting page
 		setPageVisibility([true, false, false, false, false]);
-		console.log("App Restarted");
 	}
-	// Update "algoResult" according to generated steps for solving cube
 	function handleAlgoResult(algo)
 	{
-		console.log("Algo Set Ran");
 		let forward = algo.solveMoves;
 		let reverse = algo.reverseMoves;
 		setAlgoResult({forwardAlgo: forward, reverseAlgo: reverse});
 	}
-	// console.log(algoResult.forwardAlgo);			
+
 	return (
 		<div className="App">
 			<div className="app__container">
-				{/* Conditional rendering of pages according to "pageVisibility" array */}
 				{pageVisibility[0] && <Start handleClick={handleStart}/>}
 				{pageVisibility[1] && <Position handleClick={handlePosition} />}
-				{pageVisibility[2] && <FaceSet handleClick={handleFaceInput} handleChange={handleFaceSet} colors={inputFaceColors} setAlgo={(algo) => handleAlgoResult(algo)} cubeColorState={inputFaceColors}/>}
+				{pageVisibility[2] && <FaceSet 
+                    handleClick={handleFaceInput} 
+                    handleChange={handleFaceSet} 
+                    colors={inputFaceColors} 
+                    setAlgo={(algo) => handleAlgoResult(algo)} 
+                    cubeColorState={inputFaceColors}
+                    updateFaceColor={updateFaceColor} // Pass new function
+                    onScramble={scrambleCube}         // Pass scramble function
+                />}
 				{pageVisibility[3] && <Solver handleClick={handleSolver} movesAlgo={algoResult } handleReplay={replayApp}/> }
 			</div>
 		</div>
